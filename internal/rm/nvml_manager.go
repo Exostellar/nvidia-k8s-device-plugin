@@ -114,7 +114,6 @@ func (r *nvmlResourceManager) getPreferredAllocation(available, required []strin
 		// return r.alignedAlloc(available, required, size)
 	}
 
-	klog.Error("~ !!!!!!!!!!! distributedAlloc @ nvml_manager.go")
 	// Otherwise, distribute them evenly across all replicated GPUs
 	return r.distributedAlloc(available, required, size)
 }

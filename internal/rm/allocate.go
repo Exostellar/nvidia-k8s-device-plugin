@@ -19,15 +19,33 @@ package rm
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"k8s.io/klog/v2"
 )
+
+func countGPUOccurrences(gpuList []string) map[string]int {
+	// Create a map to store the GPU counts
+	counts := make(map[string]int)
+
+	// Loop through each GPU entry in the list
+	for _, gpu := range gpuList {
+		// Split the string at "::" and take the first part (the GPU ID)
+		gpuID := strings.Split(gpu, "::")[0]
+
+		// Increment the count for the GPU ID in the map
+		counts[gpuID]++
+	}
+
+	return counts
+}
 
 // distributedAlloc returns a list of devices such that any replicated
 // devices are distributed across all replicated GPUs equally. It takes into
 // account already allocated replicas to ensure a proper balance across them.
 func (r *resourceManager) distributedAlloc(available, required []string, size int) ([]string, error) {
-	klog.Info("*************\ndistributedAlloc.")
+	klog.Info("~ distributedAlloc @ nvml_manager.go")
+
 	// Get the set of candidate devices as the difference between available and required.
 	candidates := r.devices.Subset(available).Difference(r.devices.Subset(required)).GetIDs()
 	needed := size - len(required)
@@ -35,6 +53,18 @@ func (r *resourceManager) distributedAlloc(available, required []string, size in
 	if len(candidates) < needed {
 		return nil, fmt.Errorf("not enough available devices to satisfy allocation")
 	}
+
+	counts := countGPUOccurrences(candidates)
+	klog.Infof("candidate Counts: %v", candidates)
+	// Print the counts
+	for gpuID, count := range counts {
+		klog.Infof("%s: %d\n", gpuID, count)
+	}
+
+	// var devices []string
+	// devices = append(required, devices...)
+
+	// return devices, nil
 
 	// For each candidate device, build a mapping of (stripped) device ID to
 	// total / available replicas for that device.
@@ -46,6 +76,8 @@ func (r *resourceManager) distributedAlloc(available, required []string, size in
 		}
 		replicas[id].available++
 	}
+	klog.Infof("~ replicas: %v", replicas)
+
 	for d := range r.devices {
 		id := AnnotatedID(d).GetID()
 		if _, exists := replicas[id]; !exists {
@@ -73,7 +105,71 @@ func (r *resourceManager) distributedAlloc(available, required []string, size in
 
 		klog.Info("~ Sorted devices: ", candidates)
 		klog.Info("~ Choosing: ", candidates[0])
-		klog.Infof("  with: %s free memory", candidates[0])
+		// klog.Infof("  with: %s free memory", candidates[0])
+
+		id := AnnotatedID(candidates[0]).GetID()
+		replicas[id].available--
+		devices = append(devices, candidates[0])
+		candidates = candidates[1:]
+	}
+
+	// Add the set of required devices to this list and return it.
+	devices = append(required, devices...)
+
+	return devices, nil
+}
+
+func (r *resourceManager) distributedAlloc_v2(available, required []string, size int) ([]string, error) {
+	klog.Info("~ distributedAlloc @ nvml_manager.go")
+
+	// Get the set of candidate devices as the difference between available and required.
+	candidates := r.devices.Subset(available).Difference(r.devices.Subset(required)).GetIDs()
+	needed := size - len(required)
+
+	if len(candidates) < needed {
+		return nil, fmt.Errorf("not enough available devices to satisfy allocation")
+	}
+
+	// For each candidate device, build a mapping of (stripped) device ID to
+	// total / available replicas for that device.
+	replicas := make(map[string]*struct{ total, available int })
+	for _, c := range candidates {
+		id := AnnotatedID(c).GetID()
+		if _, exists := replicas[id]; !exists {
+			replicas[id] = &struct{ total, available int }{}
+		}
+		replicas[id].available++
+	}
+	klog.Infof("~ replicas: %v", replicas)
+
+	for d := range r.devices {
+		id := AnnotatedID(d).GetID()
+		if _, exists := replicas[id]; !exists {
+			continue
+		}
+		replicas[id].total++
+	}
+
+	// Grab the set of 'needed' devices one-by-one from the candidates list.
+	// Before selecting each candidate, first sort the candidate list using the
+	// replicas map above. After sorting, the first element in the list will
+	// contain the device with the least difference between total and available
+	// replications (based on what's already been allocated). Add this device
+	// to the list of devices to allocate, remove it from the candidate list,
+	// down its available count in the replicas map, and repeat.
+	var devices []string
+	for i := 0; i < needed; i++ {
+		sort.Slice(candidates, func(i, j int) bool {
+			iid := AnnotatedID(candidates[i]).GetID()
+			jid := AnnotatedID(candidates[j]).GetID()
+			idiff := replicas[iid].total - replicas[iid].available
+			jdiff := replicas[jid].total - replicas[jid].available
+			return idiff < jdiff
+		})
+
+		klog.Info("~ Sorted devices: ", candidates)
+		klog.Info("~ Choosing: ", candidates[0])
+		// klog.Infof("  with: %s free memory", candidates[0])
 
 		id := AnnotatedID(candidates[0]).GetID()
 		replicas[id].available--
