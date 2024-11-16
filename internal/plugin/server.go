@@ -297,8 +297,242 @@ func (plugin *NvidiaDevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.D
 	}
 }
 
+// func (plugin *NvidiaDevicePlugin) GetPreferredAllocation(ctx context.Context, r *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+//     klog.Info("GetPreferredAllocation called")
+//     response := &pluginapi.PreferredAllocationResponse{}
+
+//     // Loop through each container's allocation request
+//     for _, req := range r.ContainerRequests {
+//         klog.Infof("Processing ContainerPreferredAllocationRequest: AvailableDeviceIDs=%v, MustIncludeDeviceIDs=%v, AllocationSize=%d",
+//             req.AvailableDeviceIDs, req.MustIncludeDeviceIDs, req.AllocationSize)
+
+//         // Extract pod information from context or set defaults
+//         podNamespace := "default"
+//         podName := ctx.Value("podName").(string) // Ensure podName is passed in context
+//         klog.Infof("Fetching pod metadata for PodName=%s, Namespace=%s", podName, podNamespace)
+
+//         // Fetch the pod object from Kubernetes API
+//         pod, err := plugin.kubeClient.CoreV1().Pods(podNamespace).Get(ctx, podName, metav1.GetOptions{})
+//         if err != nil {
+//             klog.Errorf("Failed to fetch pod metadata: %v", err)
+//             return nil, fmt.Errorf("failed to fetch pod metadata: %v", err)
+//         }
+
+//         // Log fetched pod annotations
+//         klog.Infof("Pod Annotations: %v", pod.Annotations)
+
+//         // Parse custom parameter from annotations
+//         numberOfRealGPUs := 1 // Default value
+//         if val, ok := pod.Annotations["gpu.allocation/number-of-real-gpus"]; ok {
+//             parsedValue, parseErr := strconv.Atoi(val)
+//             if parseErr != nil {
+//                 klog.Errorf("Invalid number-of-real-gpus annotation value: %s, error: %v", val, parseErr)
+//             } else {
+//                 numberOfRealGPUs = parsedValue
+//                 klog.Infof("Parsed numberOfRealGPUs from annotations: %d", numberOfRealGPUs)
+//             }
+//         } else {
+//             klog.Warning("No number-of-real-gpus annotation found. Using default value of 1")
+//         }
+
+//         // Use custom parameter in preferred allocation logic
+//         devices, err := plugin.rm.GetPreferredAllocation(req.AvailableDeviceIDs, req.MustIncludeDeviceIDs, numberOfRealGPUs)
+//         if err != nil {
+//             klog.Errorf("Error during preferred allocation: %v", err)
+//             return nil, fmt.Errorf("error getting list of preferred allocation devices: %v", err)
+//         }
+
+//         // Log selected devices
+//         klog.Infof("Selected devices for allocation: %v", devices)
+
+//         // Construct response for this container
+//         resp := &pluginapi.ContainerPreferredAllocationResponse{
+//             DeviceIDs: devices,
+//         }
+//         response.ContainerResponses = append(response.ContainerResponses, resp)
+//     }
+
+//     klog.Info("GetPreferredAllocation completed successfully")
+//     return response, nil
+// }
+
+// func testAPI() {
+// 	fmt.Printf("\n\ntestAPI\n")
+// 	// creates the in-cluster config
+// 	config, err := rest.InClusterConfig()
+// 	if err != nil {
+// 		panic(err.Error())
+// 	}
+// 	// creates the clientset
+// 	clientset, err := kubernetes.NewForConfig(config)
+// 	if err != nil {
+// 		panic(err.Error())
+// 	}
+
+// 	// get pods in all the namespaces by omitting namespace
+// 	// Or specify namespace to get pods in particular namespace
+// 	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+// 	if err != nil {
+// 		panic(err.Error())
+// 	}
+// 	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
+// 	fmt.Printf("Pods %v\n", pods)
+// }
+
+// func getNodeNameFromAPI() (string, error) {
+// 	fmt.Println("Starting getNodeNameFromAPI")
+
+// 	// Step 1: Create in-cluster Kubernetes config
+// 	config, err := rest.InClusterConfig()
+// 	if err != nil {
+// 		fmt.Printf("Error creating in-cluster config: %v\n", err)
+// 		return "", err
+// 	}
+// 	fmt.Println("Successfully created in-cluster config")
+
+// 	// Step 2: Create a Kubernetes client
+// 	clientset, err := kubernetes.NewForConfig(config)
+// 	if err != nil {
+// 		fmt.Printf("Error creating Kubernetes client: %v\n", err)
+// 		return "", err
+// 	}
+// 	fmt.Println("Successfully created Kubernetes client")
+
+// 	// Step 3: Get the pod name
+// 	podName, err := os.Hostname()
+// 	if err != nil {
+// 		fmt.Printf("Error getting hostname: %v\n", err)
+// 		return "", err
+// 	}
+// 	fmt.Printf("Pod name: %s\n", podName)
+
+// 	podNamespace := "nvidia-device-plugin"
+
+// 	// Step 5: Fetch the pod information
+// 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+// 	defer cancel()
+
+// 	fmt.Println("Fetching pod information")
+// 	pod, err := clientset.CoreV1().Pods(podNamespace).Get(ctx, podName, metav1.GetOptions{})
+// 	if err != nil {
+// 		fmt.Printf("Error getting pod: %v\n", err)
+// 		return "", err
+// 	}
+
+// 	fmt.Printf("Successfully fetched pod information. Node name: %s\n", pod.Spec.NodeName)
+// 	return pod.Spec.NodeName, nil
+// }
+
+// func matchDeviceIDs(deviceIDs []string, annotation string) bool {
+// 	if annotation == "" {
+// 		return false
+// 	}
+
+// 	// Parse the annotation into a list of device IDs (assume comma-separated)
+// 	annotatedIDs := strings.Split(annotation, ",")
+
+// 	// Check if all requested device IDs are present in the annotation
+// 	for _, requestedID := range deviceIDs {
+// 		found := false
+// 		for _, annotatedID := range annotatedIDs {
+// 			if requestedID == annotatedID {
+// 				found = true
+// 				break
+// 			}
+// 		}
+// 		if !found {
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
+
+// func findPodForDeviceIDs(deviceIDs []string) (*v1.Pod, error) {
+// 	// Create in-cluster Kubernetes config
+// 	config, err := rest.InClusterConfig()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error creating in-cluster config: %v", err)
+// 	}
+
+// 	clientset, err := kubernetes.NewForConfig(config)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error creating Kubernetes client: %v", err)
+// 	}
+
+// 	// List all pods in the cluster
+// 	fmt.Println("Listing all pods in the cluster...")
+// 	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error listing pods: %v", err)
+// 	}
+// 	fmt.Printf("Found %d pods in the cluster\n", len(pods.Items))
+
+// 	// Iterate through all pods to find one with matching GPU requests
+// 	for _, pod := range pods.Items {
+// 		fmt.Printf("Processing pod: %s/%s, NodeName: %s, Phase: %s\n",
+// 			pod.Namespace, pod.Name, pod.Spec.NodeName, pod.Status.Phase)
+
+// 		// Check if the pod is in the Pending phase or already assigned to the node
+// 		if pod.Status.Phase != v1.PodPending && pod.Spec.NodeName == "" {
+// 			continue
+// 		}
+
+// 		// Check each container in the pod for GPU requests
+// 		for _, container := range pod.Spec.Containers {
+// 			if gpuRequest, ok := container.Resources.Requests["nvidia.com/gpu"]; ok && gpuRequest.Value() > 0 {
+// 				fmt.Printf("  Pod %s/%s is requesting GPUs: %d\n", pod.Namespace, pod.Name, gpuRequest.Value())
+
+// 				// Match the requested device IDs
+// 				if matchDeviceIDs(deviceIDs, pod.Annotations["preferred-device-ids"]) {
+// 					fmt.Printf("  Matching pod found: %s/%s\n", pod.Namespace, pod.Name)
+// 					return &pod, nil
+// 				} else {
+// 					fmt.Printf("  Device IDs do not match for pod %s/%s\n", pod.Namespace, pod.Name)
+// 				}
+// 			} else {
+// 				fmt.Printf("  Container %s does not request GPUs\n", container.Name)
+// 			}
+// 		}
+// 	}
+
+// 	return nil, fmt.Errorf("no matching pod found for device IDs: %v", deviceIDs)
+// }
+
 // GetPreferredAllocation returns the preferred allocation from the set of devices specified in the request
 func (plugin *NvidiaDevicePlugin) GetPreferredAllocation(ctx context.Context, r *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+
+	// fmt.Printf("\n\n*****\ndude\n")
+	// nodeName, err := getNodeNameFromAPI()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to determine node name: %v", err)
+	// }
+	// fmt.Printf("\n\n*****\nDevice plugin running on node: %s\n", nodeName)
+
+	// // Log pods and their annotations
+	// fmt.Println("Fetching pods and their annotations...")
+	// pod, err := findPodForDeviceIDs(r.ContainerRequests[0].MustIncludeDeviceIDs)
+	// if err != nil {
+	// 	fmt.Printf("Error: %v\n", err)
+	// } else {
+	// 	fmt.Printf("Found pod: %s/%s\n", pod.Namespace, pod.Name)
+	// }
+	// fmt.Println("Continuing")
+
+	// testAPI()
+
+	/*
+
+		1-40  one GPU
+
+		60 one GPU
+		61 two GPUs, 30 each
+		62 three,
+		63 four
+
+		64 one
+
+	*/
+
 	response := &pluginapi.PreferredAllocationResponse{}
 	for _, req := range r.ContainerRequests {
 		devices, err := plugin.rm.GetPreferredAllocation(req.AvailableDeviceIDs, req.MustIncludeDeviceIDs, int(req.AllocationSize))
