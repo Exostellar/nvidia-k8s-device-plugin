@@ -62,7 +62,7 @@ var errInvalidRequest = errors.New("invalid request")
 // It asserts that all requested IDs are known to the resource manager and that the request is
 // valid for a specified sharing configuration.
 func (r *resourceManager) ValidateRequest(ids AnnotatedIDs) error {
-	klog.Info("~ ValidateRequest: ", ids)
+	klog.Info("~ ValidateRequest ids: ", ids)
 
 	// Assert that all requested IDs are known to the resource manager
 	for _, id := range ids {
@@ -94,7 +94,7 @@ func (r *resourceManager) ValidateRequest(ids AnnotatedIDs) error {
 		}
 	}
 
-	klog.Info("~ ValidateRequest requesting # devices:", numRequestedDevices)
+	klog.Info("~ ValidateRequest requesting # of devices:", numRequestedDevices)
 	return nil
 }
 

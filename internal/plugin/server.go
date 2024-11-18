@@ -501,7 +501,7 @@ func (plugin *NvidiaDevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.D
 // GetPreferredAllocation returns the preferred allocation from the set of devices specified in the request
 func (plugin *NvidiaDevicePlugin) GetPreferredAllocation(ctx context.Context, r *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
 
-	// fmt.Printf("\n\n*****\ndude\n")
+	fmt.Printf("\n\n*****\ndude\n")
 	// nodeName, err := getNodeNameFromAPI()
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to determine node name: %v", err)
@@ -520,19 +520,6 @@ func (plugin *NvidiaDevicePlugin) GetPreferredAllocation(ctx context.Context, r 
 
 	// testAPI()
 
-	/*
-
-		1-40  one GPU
-
-		60 one GPU
-		61 two GPUs, 30 each
-		62 three,
-		63 four
-
-		64 one
-
-	*/
-
 	response := &pluginapi.PreferredAllocationResponse{}
 	for _, req := range r.ContainerRequests {
 		devices, err := plugin.rm.GetPreferredAllocation(req.AvailableDeviceIDs, req.MustIncludeDeviceIDs, int(req.AllocationSize))
@@ -540,12 +527,16 @@ func (plugin *NvidiaDevicePlugin) GetPreferredAllocation(ctx context.Context, r 
 			return nil, fmt.Errorf("error getting list of preferred allocation devices: %v", err)
 		}
 
+		klog.Infof("~ GetPreferredAllocation req: %v", req)
+		klog.Infof("~ GetPreferredAllocation devices: %v", devices)
 		resp := &pluginapi.ContainerPreferredAllocationResponse{
 			DeviceIDs: devices,
 		}
 
 		response.ContainerResponses = append(response.ContainerResponses, resp)
 	}
+
+	klog.Infof("~ GetPreferredAllocation response: %v", response)
 	return response, nil
 }
 
@@ -553,6 +544,9 @@ func (plugin *NvidiaDevicePlugin) GetPreferredAllocation(ctx context.Context, r 
 func (plugin *NvidiaDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
 	responses := pluginapi.AllocateResponse{}
 	for _, req := range reqs.ContainerRequests {
+		klog.Infof("~ Allocate:  validating req: %v", req)
+		klog.Infof("~ Allocate:  req.DevicesIDs: %v", req.DevicesIDs)
+
 		if err := plugin.rm.ValidateRequest(req.DevicesIDs); err != nil {
 			return nil, fmt.Errorf("invalid allocation request for %q: %w", plugin.rm.Resource(), err)
 		}
@@ -561,7 +555,7 @@ func (plugin *NvidiaDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.
 			return nil, fmt.Errorf("failed to get allocate response: %v", err)
 		}
 
-		klog.Infof("~ getAllocateResponse: %v", response)
+		klog.Infof("~ getAllocateResponse returns: %v", response)
 		responses.ContainerResponses = append(responses.ContainerResponses, response)
 	}
 
@@ -570,6 +564,8 @@ func (plugin *NvidiaDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.
 
 func (plugin *NvidiaDevicePlugin) getAllocateResponse(requestIds []string) (*pluginapi.ContainerAllocateResponse, error) {
 	deviceIDs := plugin.deviceIDsFromAnnotatedDeviceIDs(requestIds)
+
+	klog.Infof("~ deviceIDs chosen to env: %v", deviceIDs)
 
 	// Create an empty response that will be updated as required below.
 	response := &pluginapi.ContainerAllocateResponse{
@@ -727,9 +723,24 @@ func (plugin *NvidiaDevicePlugin) apiDevices() []*pluginapi.Device {
 	return plugin.rm.Devices().GetPluginDevices()
 }
 
+// Helper function to remove duplicates from a slice of strings
+func removeDuplicates(input []string) []string {
+	seen := make(map[string]struct{})
+	var result []string
+
+	for _, id := range input {
+		if _, exists := seen[id]; !exists {
+			seen[id] = struct{}{}
+			result = append(result, id)
+		}
+	}
+
+	return result
+}
+
 // updateResponseForDeviceListEnvvar sets the environment variable for the requested devices.
 func (plugin *NvidiaDevicePlugin) updateResponseForDeviceListEnvvar(response *pluginapi.ContainerAllocateResponse, deviceIDs ...string) {
-	response.Envs[plugin.deviceListEnvvar] = strings.Join(deviceIDs, ",")
+	response.Envs[plugin.deviceListEnvvar] = strings.Join(removeDuplicates(deviceIDs), ",")
 }
 
 // updateResponseForDeviceMounts sets the mounts required to request devices if volume mounts are used.
