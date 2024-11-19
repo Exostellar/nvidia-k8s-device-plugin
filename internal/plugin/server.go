@@ -562,6 +562,27 @@ func (plugin *NvidiaDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.
 	return &responses, nil
 }
 
+func minCount(list []string) int {
+	if len(list) == 0 {
+		return 0 // Handle empty list case
+	}
+	freq := make(map[string]int)
+	// Count frequencies
+	for _, item := range list {
+		freq[item]++
+	}
+
+	// Find the minimum frequency
+	minCount := len(list) // Initialize to the maximum possible value
+	for _, count := range freq {
+		if count < minCount {
+			minCount = count
+		}
+	}
+
+	return minCount
+}
+
 func (plugin *NvidiaDevicePlugin) getAllocateResponse(requestIds []string) (*pluginapi.ContainerAllocateResponse, error) {
 	deviceIDs := plugin.deviceIDsFromAnnotatedDeviceIDs(requestIds)
 
@@ -592,6 +613,11 @@ func (plugin *NvidiaDevicePlugin) getAllocateResponse(requestIds []string) (*plu
 	if plugin.deviceListStrategies.Includes(spec.DeviceListStrategyEnvvar) {
 		klog.Infof("~ plugin.deviceListStrategies.Includes(spec.DeviceListStrategyEnvvar)")
 		plugin.updateResponseForDeviceListEnvvar(response, deviceIDs...)
+
+		// exo
+		klog.Infof("~ Setting EXOSTELLAR_DEVICE_MEM_LIMIT to %d GB", minCount(deviceIDs))
+		memGBs := minCount(deviceIDs) * (1024 * 1024 * 1024)
+		response.Envs["EXOSTELLAR_DEVICE_MEM_LIMIT"] = fmt.Sprintf("%d", memGBs)
 	}
 	if plugin.deviceListStrategies.Includes(spec.DeviceListStrategyVolumeMounts) {
 		plugin.updateResponseForDeviceMounts(response, deviceIDs...)
