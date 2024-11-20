@@ -41,18 +41,21 @@ func countGPUOccurrences(gpuList []string) map[string]int {
 }
 
 func calculateGPUAllocations(N int) []int {
+	// how many GPUs (len of array) and how many GB we need from each?
 	if N <= 40 { //40 is the size of an A100 (40GB)
 		return []int{N}
 	}
-	switch N % 4 {
+	switch N % 10 {
 	case 1:
 		return []int{N / 2, N/2 + 1}
 	case 2:
 		return []int{N / 3, N/3 + 1, N/3 + 1}
 	case 3:
 		return []int{N / 4, N/4 + 1, N/4 + 1, N/4 + 1}
-	default: // 0, or ends in 4
-		return []int{N / 2, N / 2}
+	case 4:
+		return []int{N / 8, N / 8, N / 8, N / 8, N / 8, N / 8, N / 8, N / 8}
+	default:
+		return []int{N}
 	}
 }
 
