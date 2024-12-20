@@ -8,6 +8,7 @@ docker build \
     -f deployments/container/Dockerfile.ubuntu \
     .
 
-docker tag nvcr.io/nvidia/k8s-device-plugin:devel 374070299695.dkr.ecr.us-east-2.amazonaws.com/xgo/nvidia-device-plugin:latest
-docker push 374070299695.dkr.ecr.us-east-2.amazonaws.com/xgo/nvidia-device-plugin:latest
+# edit these to your ECR repo
+docker tag nvcr.io/nvidia/k8s-device-plugin:devel 557690625180.dkr.ecr.us-east-2.amazonaws.com/sdg/libnvidia:latest
+docker push 557690625180.dkr.ecr.us-east-2.amazonaws.com/sdg/libnvidia:latest
 

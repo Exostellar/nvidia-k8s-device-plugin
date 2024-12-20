@@ -60,7 +60,16 @@ updateStrategy:
 
 podAnnotations: {}
 podSecurityContext: {}
-securityContext: {}
+# securityContext: {}
+
+# for debugging live
+securityContext:
+  allowPrivilegeEscalation: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+  runAsUser: 0
+
 
 resources: {}
 nodeSelector: {}

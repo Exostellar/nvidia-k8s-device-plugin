@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nbody-gpu-benchmark
+  namespace: default
+spec:
+  serviceAccountName: awscred
+  restartPolicy: OnFailure
+  initContainers:
+  - name: setup-libraries
+    image: amazonlinux
+    command:
+      - sh
+      - -c
+      - |
+        echo "Installing AWS CLI..." && \
+        yum install -y wget tar && \
+        echo "Creating directory..." && \
+        mkdir -p /opt/exostellar/lib && \
+        pushd /opt/exostellar/lib && \
+        wget -O libgpu-limiter.so  "https://sdgpu.s3.us-east-2.amazonaws.com/libgpu-limiter.tar?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVOGCTZQXWK7LSRW4%2F20241027%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20241027T190210Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=11475275ba6dea03cbcf2d77ed811785516cea2f4ec7165ea62df3ddcaf0a01d"  && \
+        # echo "Extracting file..." && \
+        # tar xf libgpu-limiter.tar && \
+        # rm libgpu-limiter.tar && \
+        echo "Creating symlinks..." && \
+        ln -s libgpu-limiter.so libcuda.so && \
+        ln -s libgpu-limiter.so libcuda.so.1 && \
+        ln -s libgpu-limiter.so libnvidia-ml.so && \
+        ln -s libgpu-limiter.so libnvidia-ml.so.1 && \
+        echo "Completed setup." && \
+        popd
+    volumeMounts:
+      - name: exostellar-lib-volume
+        mountPath: /opt/exostellar/lib  # Shared volume for libraries
+  containers:
+  - name: cuda-container
+    image: nvidia/cuda:12.4.0-base-ubuntu22.04
+    # args: ["nbody", "-gpu", "-benchmark", "-numbodies=1024000"]
+    command: ["sh", "-c", "sleep infinity"]
+    resources:
+      limits:
+        cpu: 10
+        nvidia.com/gpu: 1
+      requests:
+        cpu: 10
+        nvidia.com/gpu: 1
+    # env:
+      # - name: LD_LIBRARY_PATH
+      #   value: "/opt/exostellar/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
+      # - name: EXOSTELLAR_NVML_LIB_PATH
+      #   value: "/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1"
+      # - name: EXOSTELLAR_CUDA_LIB_PATH
+      #   value: "/usr/lib/x86_64-linux-gnu/libcuda.so.1"
+      # - name: EXOSTELLAR_DEVICE_MEM_LIMIT
+      #   value: "10737418240"
+    volumeMounts:
+      - name: exostellar-lib-volume
+        mountPath: /opt/exostellar/lib  # Use shared library volume
+  volumes:
+  - name: exostellar-lib-volume
+    emptyDir: {}
