@@ -24,31 +24,30 @@ import (
 )
 
 func calculateGPUAllocations(N int) []int {
+	return []int{N}
+
 	// how many GPUs (len of array) and how many GB we need from each?
-	if N <= 40 { //40 is the size of an A100 (40GB)
-		return []int{N}
-	}
-	switch N % 10 {
-	case 1:
-		return []int{N / 2, N/2 + 1}
-	case 2:
-		return []int{N / 3, N/3 + 1, N/3 + 1}
-	case 3:
-		return []int{N / 4, N/4 + 1, N/4 + 1, N/4 + 1}
-	case 4:
-		return []int{N / 8, N / 8, N / 8, N / 8, N / 8, N / 8, N / 8, N / 8}
-	default:
-		return []int{N}
-	}
+	// if N <= 40 { //40 is the size of an A100 (40GB)
+	// 	return []int{N}
+	// }
+	// switch N % 10 {
+	// case 1:
+	// 	return []int{N / 2, N/2 + 1}
+	// case 2:
+	// 	return []int{N / 3, N/3 + 1, N/3 + 1}
+	// case 3:
+	// 	return []int{N / 4, N/4 + 1, N/4 + 1, N/4 + 1}
+	// case 4:
+	// 	return []int{N / 8, N / 8, N / 8, N / 8, N / 8, N / 8, N / 8, N / 8}
+	// default:
+	// 	return []int{N}
+	// }
 }
 
 // distributedAlloc returns a list of devices such that any replicated
 // devices are distributed across all replicated GPUs equally. It takes into
 // account already allocated replicas to ensure a proper balance across them.
 func (r *resourceManager) distributedAlloc(available, required []string, size int) ([]string, error) {
-	// klog.Info("~ distributedAlloc @ nvml_manager.go")
-	// fmt.Print("~ distributedAlloc @ nvml_manager.go")
-
 	// Get the set of candidate devices as the difference between available and required.
 	candidates := r.devices.Subset(available).Difference(r.devices.Subset(required)).GetIDs()
 	needed := size - len(required)
