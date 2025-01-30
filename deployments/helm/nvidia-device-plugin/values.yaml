@@ -51,7 +51,7 @@ image:
   #repository: nvcr.io/nvidia/k8s-device-plugin
   #repository: 374070299695.dkr.ecr.us-east-2.amazonaws.com/xgo/nvidia-device-plugin
   #repository: 557690625180.dkr.ecr.us-east-2.amazonaws.com/sdg/libnvidia
-  repository: me-central1-docker.pkg.dev/poc-omniops-gpu/sdg/nvidia-dp
+  repository: us-central1-docker.pkg.dev/poc-omniops-gpu/sdg/nvidia-dp
   pullPolicy: IfNotPresent
   #pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
