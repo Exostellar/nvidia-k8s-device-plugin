@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sdgpu-1733455849
+  namespace: default
+spec:
+  containers:
+  - name: cuda-container
+    image: nvidia/cuda:12.4.0-devel-ubuntu22.04
+    command: ["sh", "-c", "sleep infinity"]
+    resources:
+      limits:
+        cpu: 2
+        nvidia.com/gpu: 12
+      requests:
+        cpu: 2
+        nvidia.com/gpu: 12
