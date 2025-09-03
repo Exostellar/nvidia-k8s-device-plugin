@@ -1,6 +1,6 @@
 module github.com/NVIDIA/k8s-device-plugin
 
-go 1.22.2
+go 1.23.0
 
 require (
 	github.com/NVIDIA/go-gpuallocator v0.5.0
@@ -64,7 +64,7 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/term v0.24.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
